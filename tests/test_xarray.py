@@ -3,6 +3,7 @@ import omfiles.xarray as om_xarray
 import pytest
 import xarray as xr
 from omfiles import OmFileReader, OmFileWriter
+from omfiles.xarray import write_dataset
 from xarray.core import indexing
 
 from .test_utils import create_test_om_file, filter_numpy_size_warning
@@ -150,3 +151,149 @@ def test_xarray_hierarchical_file(empty_temp_om_file):
     mean_temp = ds["temperature"].mean(dim="TIME")
     assert mean_temp.shape == (5, 5, 5)
     assert mean_temp.dims == ("LATITUDE", "LONGITUDE", "ALTITUDE")
+
+
+# ── write_dataset tests ──────────────────────────────────────────────
+
+
+@filter_numpy_size_warning
+def test_write_dataset_basic_roundtrip(empty_temp_om_file):
+    ds = xr.Dataset(
+        {"temperature": (["lat", "lon"], np.random.rand(5, 5).astype(np.float32))},
+        coords={
+            "lat": np.arange(5, dtype=np.float32),
+            "lon": np.arange(5, dtype=np.float32),
+        },
+        attrs={"description": "Test dataset"},
+    )
+    write_dataset(ds, empty_temp_om_file, scale_factor=100000.0)
+    ds2 = xr.open_dataset(empty_temp_om_file, engine="om")
+
+    np.testing.assert_array_almost_equal(ds2["temperature"].values, ds["temperature"].values, decimal=4)
+    np.testing.assert_array_equal(ds2.coords["lat"].values, ds.coords["lat"].values)
+    np.testing.assert_array_equal(ds2.coords["lon"].values, ds.coords["lon"].values)
+    assert ds2.attrs["description"] == "Test dataset"
+
+
+@filter_numpy_size_warning
+def test_write_dataset_hierarchical_roundtrip(empty_temp_om_file):
+    """Mirrors test_xarray_hierarchical_file but uses write_dataset."""
+    temperature_data = np.random.rand(5, 5, 5, 10).astype(np.float32)
+    precipitation_data = np.random.rand(5, 5, 10).astype(np.float32)
+
+    ds = xr.Dataset(
+        {
+            "temperature": (
+                ["LATITUDE", "LONGITUDE", "ALTITUDE", "TIME"],
+                temperature_data,
+                {"units": "celsius", "description": "Surface temperature"},
+            ),
+            "precipitation": (
+                ["LATITUDE", "LONGITUDE", "TIME"],
+                precipitation_data,
+                {"units": "mm", "description": "Precipitation"},
+            ),
+        },
+        coords={
+            "LATITUDE": np.arange(5, dtype=np.float32),
+            "LONGITUDE": np.arange(5, dtype=np.float32),
+            "ALTITUDE": np.arange(5, dtype=np.float32),
+            "TIME": np.arange(10, dtype=np.float32),
+        },
+        attrs={"description": "This is a hierarchical OM File"},
+    )
+
+    write_dataset(ds, empty_temp_om_file, scale_factor=100000.0)
+    ds2 = xr.open_dataset(empty_temp_om_file, engine="om")
+
+    # Check global attr
+    assert ds2.attrs["description"] == "This is a hierarchical OM File"
+
+    # Check variables
+    assert set(ds2.data_vars) == {"temperature", "precipitation"}
+
+    # Check temperature
+    np.testing.assert_array_almost_equal(ds2["temperature"].values, temperature_data, decimal=4)
+    assert ds2["temperature"].dims == ("LATITUDE", "LONGITUDE", "ALTITUDE", "TIME")
+    assert ds2["temperature"].attrs["units"] == "celsius"
+    assert ds2["temperature"].attrs["description"] == "Surface temperature"
+
+    # Check precipitation
+    np.testing.assert_array_almost_equal(ds2["precipitation"].values, precipitation_data, decimal=4)
+    assert ds2["precipitation"].dims == ("LATITUDE", "LONGITUDE", "TIME")
+    assert ds2["precipitation"].attrs["units"] == "mm"
+
+    # Check coords
+    assert ds2["LATITUDE"].dims == ("LATITUDE",)
+    assert ds2["LONGITUDE"].dims == ("LONGITUDE",)
+    assert ds2["ALTITUDE"].dims == ("ALTITUDE",)
+    assert ds2["TIME"].dims == ("TIME",)
+
+
+@filter_numpy_size_warning
+def test_write_dataset_per_variable_encoding(empty_temp_om_file):
+    ds = xr.Dataset(
+        {
+            "high_res": (["x", "y"], np.random.rand(10, 10).astype(np.float32)),
+            "low_res": (["x", "y"], np.random.rand(10, 10).astype(np.float32)),
+        },
+        coords={
+            "x": np.arange(10, dtype=np.float32),
+            "y": np.arange(10, dtype=np.float32),
+        },
+    )
+
+    write_dataset(
+        ds,
+        empty_temp_om_file,
+        scale_factor=1000.0,
+        encoding={
+            "high_res": {"scale_factor": 100000.0, "chunks": [5, 5]},
+            "low_res": {"chunks": [10, 10]},
+        },
+    )
+    ds2 = xr.open_dataset(empty_temp_om_file, engine="om")
+
+    # high_res should have better precision due to higher scale_factor
+    np.testing.assert_array_almost_equal(ds2["high_res"].values, ds["high_res"].values, decimal=4)
+    # low_res uses global scale_factor=1000.0, so less precise
+    np.testing.assert_array_almost_equal(ds2["low_res"].values, ds["low_res"].values, decimal=2)
+
+
+@filter_numpy_size_warning
+@pytest.mark.parametrize("dtype", [np.int32, np.int64, np.uint32, np.uint64])
+def test_write_dataset_integer_dtypes(dtype, empty_temp_om_file):
+    data = np.arange(25, dtype=dtype).reshape(5, 5)
+    ds = xr.Dataset({"values": (["x", "y"], data)})
+
+    write_dataset(ds, empty_temp_om_file)
+    ds2 = xr.open_dataset(empty_temp_om_file, engine="om")
+
+    np.testing.assert_array_equal(ds2["values"].values, data)
+    assert ds2["values"].dtype == dtype
+
+
+@filter_numpy_size_warning
+def test_write_dataset_unsupported_attrs_warning(empty_temp_om_file):
+    ds = xr.Dataset(
+        {"data": (["x"], np.arange(5, dtype=np.float32))},
+        attrs={"valid": "hello", "invalid": [1, 2, 3]},
+    )
+
+    with pytest.warns(UserWarning, match="Skipping attribute"):
+        write_dataset(ds, empty_temp_om_file, scale_factor=100000.0)
+
+    ds2 = xr.open_dataset(empty_temp_om_file, engine="om")
+    assert ds2.attrs["valid"] == "hello"
+    assert "invalid" not in ds2.attrs
+
+
+def test_write_dataset_datetime_raises(empty_temp_om_file):
+    time_values = np.array(["2020-01-01", "2020-01-02", "2020-01-03", "2020-01-04", "2020-01-05"], dtype="datetime64[ns]")
+    ds = xr.Dataset(
+        {"data": (["time"], np.arange(5, dtype=np.float32))},
+        coords={"time": time_values},
+    )
+
+    with pytest.raises(TypeError, match="datetime64"):
+        write_dataset(ds, empty_temp_om_file)

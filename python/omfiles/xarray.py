@@ -3,6 +3,10 @@
 
 from __future__ import annotations
 
+import os
+import warnings
+from typing import Any, Sequence
+
 import numpy as np
 
 try:
@@ -21,7 +25,7 @@ from xarray.core.dataset import Dataset
 from xarray.core.utils import FrozenDict
 from xarray.core.variable import Variable
 
-from ._rust import OmFileReader, OmVariable
+from ._rust import OmFileReader, OmFileWriter, OmVariable
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -181,3 +185,143 @@ class OmBackendArray(BackendArray):
             indexing.IndexingSupport.BASIC,
             self.reader.__getitem__,
         )
+
+
+def _write_scalar_safe(writer: OmFileWriter, value: Any, name: str) -> OmVariable | None:
+    """Write a scalar, returning None and warning if the type is unsupported."""
+    try:
+        return writer.write_scalar(value, name=name)
+    except (ValueError, TypeError) as e:
+        warnings.warn(
+            f"Skipping attribute '{name}' with value {value!r}: {e}",
+            UserWarning,
+            stacklevel=3,
+        )
+        return None
+
+
+def _resolve_chunks_for_variable(
+    var_name: str,
+    var: Variable,
+    encoding: dict[str, dict[str, Any]] | None,
+    global_chunks: dict[str, int] | None,
+) -> list[int]:
+    """Resolve chunk sizes for a variable using the priority chain."""
+    if encoding and var_name in encoding and "chunks" in encoding[var_name]:
+        return list(encoding[var_name]["chunks"])
+
+    if global_chunks is not None:
+        return [global_chunks.get(dim, min(size, 512)) for dim, size in zip(var.dims, var.shape)]
+
+    return [min(size, 512) for size in var.shape]
+
+
+def _resolve_encoding_for_variable(
+    var_name: str,
+    encoding: dict[str, dict[str, Any]] | None,
+    global_scale_factor: float,
+    global_add_offset: float,
+    global_compression: str,
+) -> tuple[float, float, str]:
+    """Resolve compression parameters for a variable."""
+    var_enc = (encoding or {}).get(var_name, {})
+    sf = var_enc.get("scale_factor", global_scale_factor)
+    ao = var_enc.get("add_offset", global_add_offset)
+    comp = var_enc.get("compression", global_compression)
+    return sf, ao, comp
+
+
+def write_dataset(
+    ds: Dataset,
+    path: str | os.PathLike,
+    *,
+    encoding: dict[str, dict[str, Any]] | None = None,
+    chunks: dict[str, int] | None = None,
+    scale_factor: float = 1.0,
+    add_offset: float = 0.0,
+    compression: str = "pfor_delta_2d",
+) -> None:
+    """Write an xarray Dataset to an OM file.
+
+    The resulting file can be read back with ``xr.open_dataset(path, engine="om")``.
+
+    Args:
+        ds: The xarray Dataset to write.
+        path: Output file path.
+        encoding: Per-variable overrides. Keys per variable: ``"chunks"``,
+            ``"scale_factor"``, ``"add_offset"``, ``"compression"``.
+        chunks: Global default chunk sizes as ``{dim_name: chunk_size}``.
+        scale_factor: Global default scale factor for float compression.
+        add_offset: Global default offset for float compression.
+        compression: Global default compression algorithm.
+    """
+    path = str(path)
+    writer = OmFileWriter(path)
+    all_children: list[OmVariable] = []
+
+    def _write_variable(name: str, var: Variable, is_dim_coord: bool) -> None:
+        """Write a single variable (data var or non-dimension coordinate)."""
+        # Check for unsupported dtypes
+        if np.issubdtype(var.dtype, np.datetime64) or np.issubdtype(var.dtype, np.timedelta64):
+            raise TypeError(
+                f"Variable '{name}' has dtype {var.dtype}. "
+                "OM files do not support datetime64/timedelta64 natively. "
+                "Convert to a numeric type before writing."
+            )
+
+        var_children: list[OmVariable] = []
+
+        if not is_dim_coord:
+            # Write _ARRAY_DIMENSIONS metadata
+            dim_str = ",".join(var.dims)
+            dim_var = writer.write_scalar(dim_str, name=DIMENSION_KEY)
+            var_children.append(dim_var)
+
+            # Write variable attributes as scalar children
+            for attr_name, attr_value in var.attrs.items():
+                scalar = _write_scalar_safe(writer, attr_value, attr_name)
+                if scalar is not None:
+                    var_children.append(scalar)
+
+        # Resolve chunks and encoding
+        if is_dim_coord:
+            resolved_chunks = [var.shape[0]]
+        else:
+            resolved_chunks = _resolve_chunks_for_variable(name, var, encoding, chunks)
+
+        sf, ao, comp = _resolve_encoding_for_variable(
+            name, encoding, scale_factor, add_offset, compression
+        )
+
+        om_var = writer.write_array(
+            var.values,
+            chunks=resolved_chunks,
+            scale_factor=sf,
+            add_offset=ao,
+            compression=comp,
+            name=name,
+            children=var_children if var_children else None,
+        )
+        all_children.append(om_var)
+
+    # Write data variables
+    for var_name in ds.data_vars:
+        _write_variable(var_name, ds[var_name].variable, is_dim_coord=False)
+
+    # Write coordinate variables
+    for coord_name in ds.coords:
+        if coord_name in ds.data_vars:
+            continue
+        coord = ds.coords[coord_name]
+        is_dim_coord = coord.ndim == 1 and coord.dims[0] == coord_name
+        _write_variable(coord_name, coord.variable, is_dim_coord=is_dim_coord)
+
+    # Write global attributes
+    for attr_name, attr_value in ds.attrs.items():
+        scalar = _write_scalar_safe(writer, attr_value, attr_name)
+        if scalar is not None:
+            all_children.append(scalar)
+
+    # Create root group and finalize
+    root_var = writer.write_group(name="", children=all_children)
+    writer.close(root_var)
