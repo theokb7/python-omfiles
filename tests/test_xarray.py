@@ -289,7 +289,9 @@ def test_write_dataset_unsupported_attrs_warning(empty_temp_om_file):
 
 
 def test_write_dataset_datetime_raises(empty_temp_om_file):
-    time_values = np.array(["2020-01-01", "2020-01-02", "2020-01-03", "2020-01-04", "2020-01-05"], dtype="datetime64[ns]")
+    time_values = np.array(
+        ["2020-01-01", "2020-01-02", "2020-01-03", "2020-01-04", "2020-01-05"], dtype="datetime64[ns]"
+    )
     ds = xr.Dataset(
         {"data": (["time"], np.arange(5, dtype=np.float32))},
         coords={"time": time_values},

@@ -6,7 +6,6 @@ from omfiles import OmFileReader, OmFileWriter
 
 
 class TestWriteArrayStreaming:
-
     def test_streaming_single_chunk(self):
         shape = (10, 20)
         chunks = [10, 20]
@@ -224,7 +223,6 @@ class TestWriteArrayStreaming:
 
 
 class TestWriteDaskArray:
-
     @pytest.fixture(autouse=True)
     def _import_dask(self):
         pytest.importorskip("dask.array")

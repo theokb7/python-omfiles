@@ -58,8 +58,10 @@ def set_memory_limit(limit_mb: int) -> bool:
             print(f"  Memory limit set to {limit_mb} MB (enforced on Linux)")
             return True
         else:
-            print(f"  Memory limit requested ({limit_mb} MB) but {platform.system()} "
-                  "does not enforce RLIMIT_AS — relying on memory tracking instead")
+            print(
+                f"  Memory limit requested ({limit_mb} MB) but {platform.system()} "
+                "does not enforce RLIMIT_AS — relying on memory tracking instead"
+            )
             return False
     except (ValueError, OSError, AttributeError) as e:
         print(f"  Could not set memory limit: {e}")
@@ -87,8 +89,10 @@ def main():
     tracemalloc.start()
 
     # --- 3. Create a dask array larger than the memory limit -----------------
-    print(f"\n2. Creating dask array: {side_length} x {side_length} {DTYPE.__name__} "
-          f"({actual_size_mb:.0f} MB, chunked {CHUNK_SIZE} x {CHUNK_SIZE})")
+    print(
+        f"\n2. Creating dask array: {side_length} x {side_length} {DTYPE.__name__} "
+        f"({actual_size_mb:.0f} MB, chunked {CHUNK_SIZE} x {CHUNK_SIZE})"
+    )
 
     data = da.random.random(
         (side_length, side_length),
@@ -109,8 +113,7 @@ def main():
     writer.close(root)
 
     file_size_mb = os.path.getsize(filepath) / (1024 * 1024)
-    print(f"   File size on disk: {file_size_mb:.1f} MB "
-          f"(compression ratio: {actual_size_mb / file_size_mb:.1f}x)")
+    print(f"   File size on disk: {file_size_mb:.1f} MB (compression ratio: {actual_size_mb / file_size_mb:.1f}x)")
 
     # --- 5. Read back a slice and verify ------------------------------------
     print("\n4. Reading back a slice to verify...")

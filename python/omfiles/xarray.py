@@ -388,13 +388,14 @@ def write_dataset(
             resolved_chunks = [var.shape[0]]
         else:
             resolved_chunks = _resolve_chunks_for_variable(
-                name, var, encoding, chunks,
+                name,
+                var,
+                encoding,
+                chunks,
                 data_chunks=data.chunks if is_chunked else None,
             )
 
-        sf, ao, comp = _resolve_encoding_for_variable(
-            name, encoding, scale_factor, add_offset, compression
-        )
+        sf, ao, comp = _resolve_encoding_for_variable(name, encoding, scale_factor, add_offset, compression)
 
         if is_chunked:
             try:
