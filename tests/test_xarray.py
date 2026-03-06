@@ -299,6 +299,54 @@ def test_write_dataset_datetime_raises(empty_temp_om_file):
         write_dataset(ds, empty_temp_om_file)
 
 
+@filter_numpy_size_warning
+def test_write_dataset_scalar_coordinate(empty_temp_om_file):
+    """Writing a dataset with a scalar (0-d) coordinate should not segfault."""
+    temperature_data = np.random.rand(5, 5).astype(np.float32)
+    ds = xr.Dataset(
+        {"temperature": (["lat", "lon"], temperature_data)},
+        coords={
+            "lat": np.arange(5, dtype=np.float32),
+            "lon": np.arange(5, dtype=np.float32),
+            "time": np.float32(42.0),  # scalar coordinate, shape ()
+        },
+    )
+    write_dataset(ds, empty_temp_om_file, scale_factor=100000.0)
+    loaded = xr.open_dataset(empty_temp_om_file, engine="om")
+
+    # Verify scalar coordinate round-trips as a coordinate (not a data variable)
+    assert "time" in loaded.coords
+    assert "time" not in loaded.data_vars
+    assert loaded.coords["time"].ndim == 0
+    np.testing.assert_almost_equal(float(loaded.coords["time"]), 42.0)
+
+    # Verify data variable values (lossy compression, so use approximate comparison)
+    np.testing.assert_array_almost_equal(loaded["temperature"].values, temperature_data, decimal=4)
+    np.testing.assert_array_equal(loaded.coords["lat"].values, ds.coords["lat"].values)
+    np.testing.assert_array_equal(loaded.coords["lon"].values, ds.coords["lon"].values)
+
+
+@filter_numpy_size_warning
+def test_write_dataset_non_dimension_coordinate(empty_temp_om_file):
+    """Non-dimension coordinates should preserve their dimensions and coordinate status."""
+    valid_time_data = np.arange(6, dtype=np.float32)
+    ds = xr.Dataset(
+        {"t2m": (("step", "lat"), np.zeros((6, 10), dtype=np.float32))},
+        coords={"valid_time": ("step", valid_time_data)},
+    )
+    write_dataset(ds, empty_temp_om_file, scale_factor=100000.0)
+    loaded = xr.open_dataset(empty_temp_om_file, engine="om")
+
+    # Dimension must be "step", not "dim0"
+    assert loaded["valid_time"].dims == ("step",)
+
+    # Must be a coordinate, not a data variable
+    assert "valid_time" in loaded.coords
+    assert "valid_time" not in loaded.data_vars
+
+    np.testing.assert_array_equal(loaded["valid_time"].values, valid_time_data)
+
+
 # ── write_dataset streaming (dask-backed) tests ─────────────────────
 
 

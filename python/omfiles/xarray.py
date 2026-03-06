@@ -46,10 +46,17 @@ class OmXarrayEntrypoint(BackendEntrypoint):
         with OmFileReader(filename_or_obj) as root_variable:
             store = OmDataStore(root_variable)
             store_entrypoint = StoreBackendEntrypoint()
-            return store_entrypoint.open_dataset(
+            ds = store_entrypoint.open_dataset(
                 store,
                 drop_variables=drop_variables,
             )
+            # Restore non-dimension coordinates from metadata
+            coord_attr = "_COORDINATE_VARIABLES"
+            if coord_attr in ds.attrs:
+                coord_names = [c for c in ds.attrs[coord_attr].split(",") if c in ds]
+                ds = ds.set_coords(coord_names)
+                ds.attrs = {k: v for k, v in ds.attrs.items() if k != coord_attr}
+            return ds
         raise ValueError("Failed to open dataset")
 
     description = "Use .om files in Xarray"
@@ -81,6 +88,11 @@ class OmDataStore(AbstractDataStore):
         for k, variable in direct_children.items():
             child_reader = reader._init_from_variable(variable)
             if child_reader.is_scalar:
+                # Skip scalars that have _ARRAY_DIMENSIONS — they are 0-d
+                # coordinate variables, not plain attributes.
+                dim_key = path + "/" + k + "/" + DIMENSION_KEY
+                if dim_key in self.variables_store:
+                    continue
                 attrs[k] = child_reader.read_scalar()
         return attrs
 
@@ -158,6 +170,34 @@ class OmDataStore(AbstractDataStore):
 
             data = indexing.LazilyIndexedArray(backend_array)
             datasets[var_key] = Variable(dims=dim_names, data=data, attrs=attrs_for_var, encoding=None, fastpath=True)
+
+        # Handle 0-d (scalar) variables that have _ARRAY_DIMENSIONS metadata.
+        # These are scalar coordinates written by write_dataset.
+        for var_key, var in self.variables_store.items():
+            if var_key in datasets:
+                continue
+            child_reader = reader._init_from_variable(var)
+            if not child_reader.is_scalar:
+                continue
+            # Check if this scalar has _ARRAY_DIMENSIONS as a child
+            dim_path = var_key + "/" + DIMENSION_KEY
+            if dim_path not in self.variables_store:
+                continue
+            # Read dimension names
+            dim_reader = reader._init_from_variable(self.variables_store[dim_path])
+            dim_names_str = dim_reader.read_scalar()
+            if isinstance(dim_names_str, str) and dim_names_str == "":
+                dim_names = ()
+            elif isinstance(dim_names_str, str):
+                dim_names = tuple(dim_names_str.split(","))
+            else:
+                dim_names = ()
+            # Read the scalar value and its attributes
+            scalar_value = child_reader.read_scalar()
+            attrs = self._get_attributes_for_variable(child_reader, var_key)
+            attrs_for_var = {k: v for k, v in attrs.items() if k != DIMENSION_KEY}
+            datasets[var_key] = Variable(dims=dim_names, data=np.array(scalar_value))
+
         return datasets
 
     def close(self):
@@ -326,6 +366,16 @@ def write_dataset(
                 if scalar is not None:
                     var_children.append(scalar)
 
+        # Handle 0-d (scalar) variables
+        if var.ndim == 0:
+            om_var = writer.write_scalar(
+                var.values[()],  # numpy scalar preserves dtype
+                name=name,
+                children=var_children if var_children else None,
+            )
+            all_children.append(om_var)
+            return
+
         # Check if the variable data is chunked (e.g. dask-backed)
         data = var.data
         is_chunked = not is_dim_coord and hasattr(data, "chunks") and data.chunks is not None
@@ -384,13 +434,21 @@ def write_dataset(
     for var_name in ds.data_vars:
         _write_variable(var_name, ds[var_name].variable, is_dim_coord=False)
 
-    # Write coordinate variables
+    # Write coordinate variables, tracking non-dimension coordinates
+    non_dim_coords: list[str] = []
     for coord_name in ds.coords:
         if coord_name in ds.data_vars:
             continue
         coord = ds.coords[coord_name]
         is_dim_coord = coord.ndim == 1 and coord.dims[0] == coord_name
+        if not is_dim_coord:
+            non_dim_coords.append(coord_name)
         _write_variable(coord_name, coord.variable, is_dim_coord=is_dim_coord)
+
+    # Write list of non-dimension coordinates so the reader can restore them
+    if non_dim_coords:
+        coord_list_var = writer.write_scalar(",".join(non_dim_coords), name="_COORDINATE_VARIABLES")
+        all_children.append(coord_list_var)
 
     # Write global attributes
     for attr_name, attr_value in ds.attrs.items():
