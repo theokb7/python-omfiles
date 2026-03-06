@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0](https://github.com/theokb7/python-omfiles/compare/v1.1.1...v1.2.0) (2026-03-06)
+
+
+### Features
+
+* add GitHub release wheel uploads ([a6ac2b3](https://github.com/theokb7/python-omfiles/commit/a6ac2b361a5c8145901d06f6f053d95a701b9931))
+
 ## [1.1.1](https://github.com/open-meteo/python-omfiles/compare/v1.1.0...v1.1.1) (2026-02-19)
 
 
