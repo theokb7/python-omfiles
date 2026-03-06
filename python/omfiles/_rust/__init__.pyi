@@ -2,11 +2,13 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+import typing
+
 import numpy
 import numpy.typing
 import omfiles
 from omfiles import types
-import typing
+
 __all__ = [
     "OmFileReader",
     "OmFileReaderAsync",

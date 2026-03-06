@@ -242,7 +242,8 @@ def _write_scalar_safe(writer: OmFileWriter, value: Any, name: str) -> OmVariabl
 
 
 def _chunked_block_iterator(data: Any) -> Generator[np.ndarray, None, None]:
-    """Yield numpy arrays from a chunked array in C-order block traversal.
+    """
+    Yield numpy arrays from a chunked array in C-order block traversal.
 
     Works with any array that exposes ``.numblocks``, ``.blocks[idx]``,
     and ``.compute()`` (e.g. dask arrays).  No dask import required.
@@ -257,7 +258,8 @@ def _chunked_block_iterator(data: Any) -> Generator[np.ndarray, None, None]:
 
 
 def _validate_uniform_chunks(data_chunks: tuple, om_chunks: list[int]) -> None:
-    """Validate that chunked-array chunks are uniform and compatible with OM chunks.
+    """
+    Validate that chunked-array chunks are uniform and compatible with OM chunks.
 
     All chunks except the last along each dimension must equal the OM chunk
     size, and the last chunk must not exceed it.
@@ -324,7 +326,8 @@ def write_dataset(
     add_offset: float = 0.0,
     compression: str = "pfor_delta_2d",
 ) -> None:
-    """Write an xarray Dataset to an OM file.
+    """
+    Write an xarray Dataset to an OM file.
 
     The resulting file can be read back with ``xr.open_dataset(path, engine="om")``.
 
