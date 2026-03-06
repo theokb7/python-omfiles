@@ -2,12 +2,11 @@
 # ruff: noqa: E501, F401, F403, F405
 
 from omfiles._rust import OmFileReader, OmFileReaderAsync, OmFileWriter, OmVariable
-
 from . import _rust
-
 __all__ = [
     "OmFileReader",
     "OmFileReaderAsync",
     "OmFileWriter",
     "OmVariable",
 ]
+

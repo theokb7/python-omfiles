@@ -2,13 +2,11 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
-import typing
-
 import numpy
 import numpy.typing
 import omfiles
 from omfiles import types
-
+import typing
 __all__ = [
     "OmFileReader",
     "OmFileReaderAsync",
@@ -21,11 +19,11 @@ __all__ = [
 class OmFileReader:
     r"""
     An OmFileReader class for reading .om files synchronously.
-
+    
     An OmFileReader object can represent a multidimensional array variable, a scalar variable (an attribute), or a group.
     An OmFileReader can have an arbitrary number of child readers, each representing a child node in a tree-hierarchy.
     Supports reading from local files via memory mapping or from remote files through fsspec compatibility.
-
+    
     Variables in OM-Files do not have named dimensions! That means you have to know
     what the dimensions represent in advance or you need to explicitly encode them as
     some kind of attribute.
@@ -34,7 +32,7 @@ class OmFileReader:
     def closed(self) -> builtins.bool:
         r"""
         Check if the reader is closed.
-
+        
         Returns:
             bool: True if the reader is closed, False otherwise.
         """
@@ -42,7 +40,7 @@ class OmFileReader:
     def shape(self) -> tuple:
         r"""
         The shape of the variable.
-
+        
         Returns:
             tuple[int, …]: The shape of the variable as a tuple.
         """
@@ -50,7 +48,7 @@ class OmFileReader:
     def chunks(self) -> tuple:
         r"""
         The chunk shape of the variable.
-
+        
         Returns:
             tuple[int, …]: The chunk shape of the variable as a tuple.
         """
@@ -58,7 +56,7 @@ class OmFileReader:
     def is_array(self) -> builtins.bool:
         r"""
         Check if the variable is an array.
-
+        
         Returns:
             bool: True if the variable is an array, False otherwise.
         """
@@ -66,7 +64,7 @@ class OmFileReader:
     def is_scalar(self) -> builtins.bool:
         r"""
         Check if the variable is a scalar.
-
+        
         Returns:
             bool: True if the variable is a scalar, False otherwise.
         """
@@ -74,7 +72,7 @@ class OmFileReader:
     def is_group(self) -> builtins.bool:
         r"""
         Check if the variable is a group (a variable with data type None).
-
+        
         Returns:
             bool: True if the variable is a group, False otherwise.
         """
@@ -82,7 +80,7 @@ class OmFileReader:
     def dtype(self) -> typing.Any:
         r"""
         Get the data type of the data stored in the .om file.
-
+        
         Returns:
             numpy.dtype | type: Data type of the data.
         """
@@ -90,7 +88,7 @@ class OmFileReader:
     def name(self) -> builtins.str:
         r"""
         Get the name of the variable stored in the .om file.
-
+        
         Returns:
             str: Name of the variable or an empty string if not available.
         """
@@ -98,7 +96,7 @@ class OmFileReader:
     def compression_name(self) -> builtins.str:
         r"""
         Get the compression type of the variable.
-
+        
         Returns:
             str: Compression type of the variable.
         """
@@ -106,17 +104,17 @@ class OmFileReader:
     def num_children(self) -> builtins.int:
         r"""
         Number of children of the variable.
-
+        
         Returns:
             int: Number of children of the variable.
         """
     def __new__(cls, source: typing.Any) -> OmFileReader:
         r"""
         Initialize an OmFileReader from a file path or fsspec file object.
-
+        
         Args:
             source (str or fsspec.core.OpenFile): Path to the .om file to read or a fsspec file object.
-
+        
         Raises:
             ValueError: If the file cannot be opened or is invalid.
         """
@@ -124,10 +122,10 @@ class OmFileReader:
     def from_path(file_path: builtins.str) -> OmFileReader:
         r"""
         Create an OmFileReader from a file path.
-
+        
         Args:
             file_path (str): Path to the .om file to read.
-
+        
         Returns:
             OmFileReader: OmFileReader instance.
         """
@@ -135,136 +133,101 @@ class OmFileReader:
     def from_fsspec(fs_obj: typing.Any, path: builtins.str) -> OmFileReader:
         r"""
         Create an OmFileReader from a fsspec fs object.
-
+        
         Args:
             fs_obj (fsspec.spec.AbstractFileSystem): A fsspec file system object which needs to have the methods `cat_file` and `size`.
             path (str): The path to the file within the file system.
-
+        
         Returns:
             OmFileReader: A new reader instance.
         """
     def _get_flat_variable_metadata(self) -> builtins.dict[builtins.str, OmVariable]:
         r"""
         Get a mapping of variable names to their file offsets and sizes.
-
+        
         Returns:
             dict: Dictionary mapping variable names to their metadata.
         """
     def _init_from_variable(self, variable: OmVariable) -> OmFileReader:
         r"""
         Initialize a new OmFileReader from a child variable.
-
+        
         Args:
             variable (OmVariable): Variable metadata to create a new reader from.
-
+        
         Returns:
             OmFileReader: A new reader for the specified variable.
         """
     def __enter__(self) -> OmFileReader:
         r"""
         Enter a context manager block.
-
+        
         Returns:
             OmFileReader: Self for use in context manager.
         """
-    def __exit__(
-        self,
-        _exc_type: typing.Optional[typing.Any] = None,
-        _exc_value: typing.Optional[typing.Any] = None,
-        _traceback: typing.Optional[typing.Any] = None,
-    ) -> builtins.bool:
+    def __exit__(self, _exc_type: typing.Optional[typing.Any] = None, _exc_value: typing.Optional[typing.Any] = None, _traceback: typing.Optional[typing.Any] = None) -> builtins.bool:
         r"""
         Exit a context manager block, closing the reader.
-
+        
         Args:
             _exc_type (type, optional): The exception type, if an exception was raised.
             _exc_value (Exception, optional): The exception value, if an exception was raised.
             _traceback (traceback, optional): The traceback, if an exception was raised.
-
+        
         Returns:
             bool: False (exceptions are not suppressed).
         """
     def close(self) -> None:
         r"""
         Close the reader and release resources.
-
+        
         This method releases all resources associated with the reader.
         After closing, any operation on the reader will raise a ValueError.
-
+        
         It is safe to call this method multiple times.
         """
     def get_child_by_index(self, index: builtins.int) -> OmFileReader:
         r"""
         Get a child reader at the specified index.
-
+        
         Returns:
             OmFileReader: Child reader at the specified index if exists.
         """
     def get_child_by_name(self, name: builtins.str) -> OmFileReader:
         r"""
         Get a child reader by name.
-
+        
         Returns:
             OmFileReader: Child reader with the specified name if exists.
         """
-    def read_array(
-        self, ranges: types.BasicSelection
-    ) -> numpy.typing.NDArray[
-        typing.Union[
-            numpy.float32,
-            numpy.float64,
-            numpy.int32,
-            numpy.int64,
-            numpy.uint32,
-            numpy.uint64,
-            numpy.int8,
-            numpy.uint8,
-            numpy.int16,
-            numpy.uint16,
-        ]
-    ]:
+    def read_array(self, ranges: types.BasicSelection) -> numpy.typing.NDArray[typing.Union[numpy.float32, numpy.float64, numpy.int32, numpy.int64, numpy.uint32, numpy.uint64, numpy.int8, numpy.uint8, numpy.int16, numpy.uint16]]:
         r"""
         Read data from the open variable.om file using numpy-style indexing.
-
+        
         Currently only slices with step 1 are supported.
-
+        
         Follows NumPy indexing semantics:
         - Integer indices remove that dimension
         - Slice indices (even of length 1) preserve the dimension
-
+        
         Args:
             ranges (:py:data:`omfiles.types.BasicSelection`): Index expression to select data from the array.
                 Supports basic numpy indexing.
-
+        
         Returns:
             numpy.typing.NDArray[numpy.int8 | numpy.int16 | numpy.int32 | numpy.int64 | numpy.uint8 | numpy.uint16 | numpy.uint32 | numpy.uint64 | numpy.float32 | numpy.float64]: NDArray containing the requested data with squeezed singleton dimensions.
-
+        
         Raises:
             ValueError: If the requested ranges are invalid or if there's an error reading the data.
         """
-    def __getitem__(
-        self, ranges: types.BasicSelection
-    ) -> numpy.typing.NDArray[
-        typing.Union[
-            numpy.float32,
-            numpy.float64,
-            numpy.int32,
-            numpy.int64,
-            numpy.uint32,
-            numpy.uint64,
-            numpy.int8,
-            numpy.uint8,
-            numpy.int16,
-            numpy.uint16,
-        ]
-    ]: ...
+    def __getitem__(self, ranges: types.BasicSelection) -> numpy.typing.NDArray[typing.Union[numpy.float32, numpy.float64, numpy.int32, numpy.int64, numpy.uint32, numpy.uint64, numpy.int8, numpy.uint8, numpy.int16, numpy.uint16]]: ...
     def read_scalar(self) -> typing.Any:
         r"""
         Read the scalar value of the variable.
-
+        
         Returns:
             object: The scalar value as a numpy scalar or a Python string.
-
+        
         Raises:
             ValueError: If the variable is not a scalar.
         """
@@ -273,11 +236,11 @@ class OmFileReader:
 class OmFileReaderAsync:
     r"""
     An OmFileReaderAsync class for reading .om files asynchronously.
-
+    
     An OmFileReaderAsync object can represent a multidimensional array variable, a scalar variable (an attribute), or a group.
     An OmFileReaderAsync can have an arbitrary number of child readers, each representing a child node in a tree-hierarchy.
     Supports reading from local files via memory mapping or from remote files through fsspec compatibility.
-
+    
     Variables in OM-Files do not have named dimensions! That means you have to know
     what the dimensions represent in advance or you need to explicitly encode them as
     some kind of attribute.
@@ -286,7 +249,7 @@ class OmFileReaderAsync:
     def closed(self) -> builtins.bool:
         r"""
         Check if the reader is closed.
-
+        
         Returns:
             bool: True if the reader is closed, False otherwise.
         """
@@ -294,7 +257,7 @@ class OmFileReaderAsync:
     def shape(self) -> tuple:
         r"""
         The shape of the variable.
-
+        
         Returns:
             tuple[int, …]: The shape of the variable as a tuple.
         """
@@ -302,7 +265,7 @@ class OmFileReaderAsync:
     def chunks(self) -> tuple:
         r"""
         The chunk shape of the variable.
-
+        
         Returns:
             tuple[int, …]: The chunk shape of the variable as a tuple.
         """
@@ -310,7 +273,7 @@ class OmFileReaderAsync:
     def is_array(self) -> builtins.bool:
         r"""
         Check if the variable is an array.
-
+        
         Returns:
             bool: True if the variable is an array, False otherwise.
         """
@@ -318,7 +281,7 @@ class OmFileReaderAsync:
     def is_scalar(self) -> builtins.bool:
         r"""
         Check if the variable is a scalar.
-
+        
         Returns:
             bool: True if the variable is a scalar, False otherwise.
         """
@@ -326,7 +289,7 @@ class OmFileReaderAsync:
     def is_group(self) -> builtins.bool:
         r"""
         Check if the variable is a group (a variable with data type None).
-
+        
         Returns:
             bool: True if the variable is a group, False otherwise.
         """
@@ -334,7 +297,7 @@ class OmFileReaderAsync:
     def dtype(self) -> typing.Any:
         r"""
         Get the data type of the data stored in the .om file.
-
+        
         Returns:
             numpy.dtype | type: Data type of the data.
         """
@@ -342,7 +305,7 @@ class OmFileReaderAsync:
     def name(self) -> builtins.str:
         r"""
         Get the name of the variable stored in the .om file.
-
+        
         Returns:
             str: Name of the variable or an empty string if not available.
         """
@@ -350,7 +313,7 @@ class OmFileReaderAsync:
     def compression_name(self) -> builtins.str:
         r"""
         Get the compression type of the variable.
-
+        
         Returns:
             str: Compression type of the variable.
         """
@@ -358,7 +321,7 @@ class OmFileReaderAsync:
     def num_children(self) -> builtins.int:
         r"""
         Number of children of the variable.
-
+        
         Returns:
             int: Number of children of the variable.
         """
@@ -366,14 +329,14 @@ class OmFileReaderAsync:
     async def from_fsspec(fs_obj: typing.Any, path: builtins.str) -> OmFileReaderAsync:
         r"""
         Create a new async reader from an fsspec fs object.
-
+        
         Args:
             fs_obj (fsspec.spec.AbstractFileSystem): A fsspec file system object which needs to have the async methods `_cat_file` and `_size`.
             path (str): The path to the file within the file system.
-
+        
         Returns:
             OmFileReaderAsync: A new reader instance.
-
+        
         Raises:
             TypeError: If the provided file object is not a valid fsspec file.
             IOError: If there's an error reading the file.
@@ -382,91 +345,71 @@ class OmFileReaderAsync:
     async def from_path(file_path: builtins.str) -> OmFileReaderAsync:
         r"""
         Create a new async reader from a local file path.
-
+        
         Args:
             file_path (str): Path to the OM file to read.
-
+        
         Returns:
             OmFileReaderAsync: A new reader instance.
-
+        
         Raises:
             IOError: If the file cannot be opened or read.
         """
     def __enter__(self) -> OmFileReaderAsync:
         r"""
         Enter a context manager block.
-
+        
         Returns:
             OmFileReaderAsync: Self for use in context manager.
         """
-    def __exit__(
-        self,
-        _exc_type: typing.Optional[typing.Any] = None,
-        _exc_value: typing.Optional[typing.Any] = None,
-        _traceback: typing.Optional[typing.Any] = None,
-    ) -> builtins.bool:
+    def __exit__(self, _exc_type: typing.Optional[typing.Any] = None, _exc_value: typing.Optional[typing.Any] = None, _traceback: typing.Optional[typing.Any] = None) -> builtins.bool:
         r"""
         Exit a context manager block, closing the reader.
-
+        
         Args:
             _exc_type (type, optional): The exception type, if an exception was raised.
             _exc_value (Exception, optional): The exception value, if an exception was raised.
             _traceback (traceback, optional): The traceback, if an exception was raised.
-
+        
         Returns:
             bool: False (exceptions are not suppressed).
         """
     def close(self) -> None:
         r"""
         Close the reader and release any resources.
-
+        
         Properly closes the underlying file resources.
-
+        
         Returns:
             None
-
+        
         Raises:
             RuntimeError: If the reader cannot be closed due to concurrent access.
         """
     async def get_child_by_index(self, index: builtins.int) -> OmFileReaderAsync:
         r"""
         Get a child reader at the specified index.
-
+        
         Returns:
             OmFileReaderAsync: Child reader at the specified index if exists.
         """
     async def get_child_by_name(self, name: builtins.str) -> OmFileReaderAsync:
         r"""
         Get a child reader by name.
-
+        
         Returns:
             OmFileReaderAsync: Child reader with the specified name if exists.
         """
-    async def read_array(
-        self, ranges: types.BasicSelection
-    ) -> numpy.typing.NDArray[
-        typing.Union[
-            numpy.float32,
-            numpy.float64,
-            numpy.int32,
-            numpy.int64,
-            numpy.uint32,
-            numpy.uint64,
-            numpy.int8,
-            numpy.uint8,
-            numpy.int16,
-            numpy.uint16,
-        ]
-    ]:
+    async def read_array(self, ranges: types.BasicSelection) -> numpy.typing.NDArray[typing.Union[numpy.float32, numpy.float64, numpy.int32, numpy.int64, numpy.uint32, numpy.uint64, numpy.int8, numpy.uint8, numpy.int16, numpy.uint16]]:
         r"""
         Read data from the array concurrently based on specified ranges.
-
+        
         Args:
             ranges (:py:data:`omfiles.types.BasicSelection`): Index or slice object specifying the ranges to read.
-
+        
         Returns:
             OmFileTypedArray: Array data of the appropriate numpy type.
-
+        
         Raises:
             ValueError: If the reader is closed.
             TypeError: If the data type is not supported.
@@ -474,10 +417,10 @@ class OmFileReaderAsync:
     def read_scalar(self) -> typing.Any:
         r"""
         Read the scalar value of the variable.
-
+        
         Returns:
             object: The scalar value as a numpy scalar or a Python string.
-
+        
         Raises:
             ValueError: If the variable is not a scalar.
         """
@@ -495,7 +438,7 @@ class OmFileWriter:
     def __new__(cls, file_path: builtins.str) -> OmFileWriter:
         r"""
         Initialize an OmFileWriter.
-
+        
         Args:
             file_path: Path where the .om file will be created
         """
@@ -503,10 +446,10 @@ class OmFileWriter:
     def at_path(path: builtins.str) -> OmFileWriter:
         r"""
         Initialize an OmFileWriter to write to a file at the specified path.
-
+        
         Args:
             path: Path where the .om file will be created
-
+        
         Returns:
             OmFileWriter: A new writer instance
         """
@@ -514,48 +457,39 @@ class OmFileWriter:
     def from_fsspec(fs_obj: typing.Any, path: builtins.str) -> OmFileWriter:
         r"""
         Create an OmFileWriter from a fsspec filesystem object.
-
+        
         Args:
             fs_obj: A fsspec filesystem object that supports write operations
             path: The path to the file within the file system
-
+        
         Returns:
             OmFileWriter: A new writer instance
         """
     def close(self, root_variable: OmVariable) -> None:
         r"""
         Finalize and close the .om file by writing the trailer with the root variable.
-
+        
         Args:
             root_variable (:py:data:`omfiles.OmVariable`): The OmVariable that serves as the root/entry point of the file hierarchy.
                            All other variables should be accessible through this root variable.
-
+        
         Returns:
             None on success.
-
+        
         Raises:
             ValueError: If the writer has already been closed
             RuntimeError: If a thread lock error occurs or if there's an error writing to the file
         """
-    def write_array(
-        self,
-        data: numpy.typing.NDArray[typing.Any],
-        chunks: typing.Sequence[builtins.int],
-        scale_factor: typing.Optional[builtins.float] = None,
-        add_offset: typing.Optional[builtins.float] = None,
-        compression: typing.Optional[builtins.str] = None,
-        name: typing.Optional[builtins.str] = None,
-        children: typing.Optional[typing.Sequence[OmVariable]] = None,
-    ) -> OmVariable:
+    def write_array(self, data: numpy.typing.NDArray[typing.Any], chunks: typing.Sequence[builtins.int], scale_factor: typing.Optional[builtins.float] = None, add_offset: typing.Optional[builtins.float] = None, compression: typing.Optional[builtins.str] = None, name: typing.Optional[builtins.str] = None, children: typing.Optional[typing.Sequence[OmVariable]] = None) -> OmVariable:
         r"""
         Write a numpy array to the .om file with specified chunking and scaling parameters.
-
+        
         ``scale_factor`` and ``add_offset`` are only respected and required for float32
         and float64 data types. Recommended compression is "pfor_delta_2d" as it achieves
         best compression ratios (on spatio-temporally correlated data), but it will be lossy
         when applied to floating-point data types because of the scale-offset encoding applied
         to convert float values to integer values.
-
+        
         Args:
             data: Input array to be written. Supported dtypes are:
                   float32, float64, int8, uint8, int16, uint16, int32, uint32, int64, uint64,
@@ -566,28 +500,55 @@ class OmFileWriter:
                          Supported values: "pfor_delta_2d", "fpx_xor_2d", "pfor_delta_2d_int16", "pfor_delta_2d_int16_logarithmic"
             name: Name of the variable to be written (default: "data")
             children: List of child variables (default: [])
-
+        
         Returns:
             :py:data:`omfiles.OmVariable` representing the written group in the file structure
-
+        
         Raises:
             ValueError: If the data type is unsupported or if parameters are invalid
         """
-    def write_scalar(
-        self, value: typing.Any, name: builtins.str, children: typing.Optional[typing.Sequence[OmVariable]] = None
-    ) -> OmVariable:
+    def write_array_streaming(self, dimensions: typing.Sequence[builtins.int], chunks: typing.Sequence[builtins.int], chunk_iterator: typing.Any, dtype: builtins.str, scale_factor: typing.Optional[builtins.float] = None, add_offset: typing.Optional[builtins.float] = None, compression: typing.Optional[builtins.str] = None, name: typing.Optional[builtins.str] = None, children: typing.Optional[typing.Sequence[OmVariable]] = None) -> OmVariable:
+        r"""
+        Write an array to the .om file by streaming chunks from a Python iterator.
+        
+        This method is designed for writing large arrays that do not fit in memory.
+        Instead of providing the full array, you provide the full array dimensions
+        and an iterator that yields numpy array chunks.
+        
+        Chunks MUST be yielded in row-major order (C-order) of the chunk grid.
+        Each chunk's shape determines how many internal file chunks it covers.
+        
+        Args:
+            dimensions: Shape of the full array (e.g., [1000, 2000])
+            chunks: Chunk sizes for each dimension (e.g., [100, 200])
+            chunk_iterator: Python iterable yielding numpy arrays, one per chunk region
+            dtype: String name of the numpy dtype (e.g., "float32", "int64")
+            scale_factor: Scale factor for data compression (default: 1.0)
+            add_offset: Offset value for data compression (default: 0.0)
+            compression: Compression algorithm to use (default: "pfor_delta_2d")
+            name: Name of the variable (default: "data")
+            children: List of child variables (default: [])
+        
+        Returns:
+            :py:data:`omfiles.OmVariable` representing the written array in the file structure
+        
+        Raises:
+            ValueError: If the dtype is unsupported or parameters are invalid
+            RuntimeError: If there's an error during compression or I/O
+        """
+    def write_scalar(self, value: typing.Any, name: builtins.str, children: typing.Optional[typing.Sequence[OmVariable]] = None) -> OmVariable:
         r"""
         Write a scalar value to the .om file.
-
+        
         Args:
             value: Scalar value to write. Supported types are:
                    int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64, String
             name: Name of the scalar variable
             children: List of child variables (default: None)
-
+        
         Returns:
             :py:data:`omfiles.OmVariable` representing the written scalar in the file structure
-
+        
         Raises:
             ValueError: If the value type is unsupported (e.g., booleans)
             RuntimeError: If there's an error writing to the file
@@ -595,16 +556,16 @@ class OmFileWriter:
     def write_group(self, name: builtins.str, children: typing.Sequence[OmVariable]) -> OmVariable:
         r"""
         Create a new group in the .om file.
-
+        
         This is essentially a variable with no data, which serves as a container for other variables.
-
+        
         Args:
             name: Name of the group
             children: List of child variables
-
+        
         Returns:
             :py:data:`omfiles.OmVariable` representing the written group in the file structure
-
+        
         Raises:
             RuntimeError: If there's an error writing to the file
         """
@@ -635,7 +596,7 @@ class OmVariable:
 class RustPforCodec:
     r"""
     RustPforCodec codec for compressing and decompressing integer arrays.
-
+    
     Supports numpy arrays of dtype: int8, int16, int32, int64, uint8, uint16, uint32, uint64.
     """
     def __new__(cls) -> RustPforCodec:
@@ -645,23 +606,23 @@ class RustPforCodec:
     def encode_array(self, array: numpy.typing.NDArray[typing.Any], dtype: numpy.dtype) -> bytes:
         r"""
         Compress a numpy integer array using RustPforCodec.
-
+        
         Args:
             array: Input numpy array (integer dtype).
             dtype: Numpy dtype of the array.
-
+        
         Returns:
             Compressed bytes.
         """
     def decode_array(self, data: bytes, dtype: numpy.dtype, length: builtins.int) -> numpy.typing.NDArray[typing.Any]:
         r"""
         Decompress RustPforCodec-compressed bytes into a numpy array.
-
+        
         Args:
             data: Compressed bytes.
             dtype: Numpy dtype of the output array.
             length: Number of elements in the output array.
-
+        
         Returns:
             Decompressed numpy array.
         """
@@ -670,3 +631,4 @@ def _check_cpu_features() -> None:
     r"""
     Check if the CPU has the required features for SIMD compression operations.
     """
+

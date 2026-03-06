@@ -3,9 +3,10 @@
 
 from __future__ import annotations
 
+import itertools
 import os
 import warnings
-from typing import Any, Sequence
+from typing import Any, Generator, Sequence
 
 import numpy as np
 
@@ -200,11 +201,49 @@ def _write_scalar_safe(writer: OmFileWriter, value: Any, name: str) -> OmVariabl
         return None
 
 
+def _chunked_block_iterator(data: Any) -> Generator[np.ndarray, None, None]:
+    """Yield numpy arrays from a chunked array in C-order block traversal.
+
+    Works with any array that exposes ``.numblocks``, ``.blocks[idx]``,
+    and ``.compute()`` (e.g. dask arrays).  No dask import required.
+    """
+    block_index_ranges = [range(n) for n in data.numblocks]
+    for block_indices in itertools.product(*block_index_ranges):
+        block = data.blocks[block_indices]
+        if hasattr(block, "compute"):
+            yield block.compute()
+        else:
+            yield np.asarray(block)
+
+
+def _validate_uniform_chunks(data_chunks: tuple, om_chunks: list[int]) -> None:
+    """Validate that chunked-array chunks are uniform and compatible with OM chunks.
+
+    All chunks except the last along each dimension must equal the OM chunk
+    size, and the last chunk must not exceed it.
+    """
+    for d in range(len(om_chunks)):
+        dim_chunks = data_chunks[d]
+        for i, c in enumerate(dim_chunks[:-1]):
+            if c != om_chunks[d]:
+                raise ValueError(
+                    f"Chunk size {c} along dimension {d} (block {i}) "
+                    f"does not match the declared OM chunk size {om_chunks[d]}. "
+                    f"All chunks except the last must be uniform."
+                )
+        if dim_chunks[-1] > om_chunks[d]:
+            raise ValueError(
+                f"Last chunk size {dim_chunks[-1]} along dimension {d} "
+                f"exceeds the declared OM chunk size {om_chunks[d]}."
+            )
+
+
 def _resolve_chunks_for_variable(
     var_name: str,
     var: Variable,
     encoding: dict[str, dict[str, Any]] | None,
     global_chunks: dict[str, int] | None,
+    data_chunks: tuple | None = None,
 ) -> list[int]:
     """Resolve chunk sizes for a variable using the priority chain."""
     if encoding and var_name in encoding and "chunks" in encoding[var_name]:
@@ -212,6 +251,10 @@ def _resolve_chunks_for_variable(
 
     if global_chunks is not None:
         return [global_chunks.get(dim, min(size, 512)) for dim, size in zip(var.dims, var.shape)]
+
+    # For chunked arrays (e.g. dask), default to their own chunk sizes
+    if data_chunks is not None:
+        return [int(c[0]) for c in data_chunks]
 
     return [min(size, 512) for size in var.shape]
 
@@ -283,25 +326,58 @@ def write_dataset(
                 if scalar is not None:
                     var_children.append(scalar)
 
+        # Check if the variable data is chunked (e.g. dask-backed)
+        data = var.data
+        is_chunked = not is_dim_coord and hasattr(data, "chunks") and data.chunks is not None
+
         # Resolve chunks and encoding
         if is_dim_coord:
             resolved_chunks = [var.shape[0]]
         else:
-            resolved_chunks = _resolve_chunks_for_variable(name, var, encoding, chunks)
+            resolved_chunks = _resolve_chunks_for_variable(
+                name, var, encoding, chunks,
+                data_chunks=data.chunks if is_chunked else None,
+            )
 
         sf, ao, comp = _resolve_encoding_for_variable(
             name, encoding, scale_factor, add_offset, compression
         )
 
-        om_var = writer.write_array(
-            var.values,
-            chunks=resolved_chunks,
-            scale_factor=sf,
-            add_offset=ao,
-            compression=comp,
-            name=name,
-            children=var_children if var_children else None,
-        )
+        if is_chunked:
+            try:
+                _validate_uniform_chunks(data.chunks, resolved_chunks)
+            except ValueError:
+                warnings.warn(
+                    f"Variable '{name}' has chunks incompatible with the "
+                    f"requested OM chunks {resolved_chunks}. "
+                    f"Falling back to materializing the array in memory.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                is_chunked = False
+
+        if is_chunked:
+            om_var = writer.write_array_streaming(
+                dimensions=[int(d) for d in var.shape],
+                chunks=[int(c) for c in resolved_chunks],
+                chunk_iterator=_chunked_block_iterator(data),
+                dtype=var.dtype.name,
+                scale_factor=sf,
+                add_offset=ao,
+                compression=comp,
+                name=name,
+                children=var_children if var_children else None,
+            )
+        else:
+            om_var = writer.write_array(
+                var.values,
+                chunks=resolved_chunks,
+                scale_factor=sf,
+                add_offset=ao,
+                compression=comp,
+                name=name,
+                children=var_children if var_children else None,
+            )
         all_children.append(om_var)
 
     # Write data variables
