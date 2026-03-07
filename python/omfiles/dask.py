@@ -76,7 +76,6 @@ def write_dask_array(
     if chunks is None:
         chunks = [c[0] for c in data.chunks]
 
-
     _validate_chunk_alignment(data.chunks, list(chunks), data.shape)
 
     return writer.write_array_streaming(

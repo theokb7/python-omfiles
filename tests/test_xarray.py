@@ -471,7 +471,8 @@ def test_write_dataset_dask_larger_chunks_than_om(empty_temp_om_file):
     )
 
     write_dataset(
-        ds, empty_temp_om_file,
+        ds,
+        empty_temp_om_file,
         chunks={"lat": 5, "lon": 10},
         scale_factor=100000.0,
     )

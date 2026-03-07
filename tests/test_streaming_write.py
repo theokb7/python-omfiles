@@ -328,7 +328,10 @@ class TestWriteDaskArray:
         with tempfile.NamedTemporaryFile(suffix=".om") as f:
             writer = OmFileWriter(f.name)
             var = self.write_dask_array(
-                writer, darr, chunks=[5, 10], scale_factor=10000.0,
+                writer,
+                darr,
+                chunks=[5, 10],
+                scale_factor=10000.0,
             )
             writer.close(var)
 
@@ -367,7 +370,10 @@ class TestWriteDaskArray:
         with tempfile.NamedTemporaryFile(suffix=".om") as f:
             writer = OmFileWriter(f.name)
             var = self.write_dask_array(
-                writer, darr, chunks=[5, 5], scale_factor=10000.0,
+                writer,
+                darr,
+                chunks=[5, 5],
+                scale_factor=10000.0,
             )
             writer.close(var)
 
