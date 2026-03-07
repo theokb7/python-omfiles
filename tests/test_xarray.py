@@ -452,3 +452,29 @@ def test_write_dataset_dask_integer_dtypes(dtype, empty_temp_om_file):
 
     np.testing.assert_array_equal(ds2["values"].values, np_data)
     assert ds2["values"].dtype == dtype
+
+
+@filter_numpy_size_warning
+def test_write_dataset_dask_larger_chunks_than_om(empty_temp_om_file):
+    """Dask blocks larger than OM chunks with explicit smaller OM chunk sizes."""
+    da = pytest.importorskip("dask.array")
+
+    np_data = np.random.rand(10, 20).astype(np.float32)
+    dask_data = da.from_array(np_data, chunks=(10, 20))
+
+    ds = xr.Dataset(
+        {"temperature": (["lat", "lon"], dask_data)},
+        coords={
+            "lat": np.arange(10, dtype=np.float32),
+            "lon": np.arange(20, dtype=np.float32),
+        },
+    )
+
+    write_dataset(
+        ds, empty_temp_om_file,
+        chunks={"lat": 5, "lon": 10},
+        scale_factor=100000.0,
+    )
+    ds2 = xr.open_dataset(empty_temp_om_file, engine="om")
+
+    np.testing.assert_array_almost_equal(ds2["temperature"].values, np_data, decimal=4)

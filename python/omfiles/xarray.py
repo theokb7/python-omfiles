@@ -257,27 +257,58 @@ def _chunked_block_iterator(data: Any) -> Generator[np.ndarray, None, None]:
             yield np.asarray(block)
 
 
-def _validate_uniform_chunks(data_chunks: tuple, om_chunks: list[int]) -> None:
+def _validate_chunk_alignment(
+    data_chunks: tuple,
+    om_chunks: list[int],
+    array_shape: tuple,
+) -> None:
     """
-    Validate that chunked-array chunks are uniform and compatible with OM chunks.
+    Validate dask chunks are compatible with OM chunks for block-level streaming.
 
-    All chunks except the last along each dimension must equal the OM chunk
-    size, and the last chunk must not exceed it.
+    Two constraints must hold:
+
+    1. **Multiples**: every non-last dask chunk along each dimension must be an
+       exact multiple of the corresponding OM chunk size.  The last dask chunk
+       may be smaller (array-boundary remainder).
+    2. **C-order alignment**: for the leftmost dimension *k* where a dask block
+       contains more than one OM chunk, every trailing dimension ``d > k`` must
+       be fully covered by each dask block (``dask_chunk[d] >= array_shape[d]``).
+       This ensures the local chunk traversal order inside a block matches the
+       global file order.
     """
-    for d in range(len(om_chunks)):
+    import math
+
+    ndim = len(om_chunks)
+
+    # Dask chunks must be multiples of OM chunks (except last chunk per dim)
+    for d in range(ndim):
         dim_chunks = data_chunks[d]
         for i, c in enumerate(dim_chunks[:-1]):
-            if c != om_chunks[d]:
+            if c % om_chunks[d] != 0:
                 raise ValueError(
-                    f"Chunk size {c} along dimension {d} (block {i}) "
-                    f"does not match the declared OM chunk size {om_chunks[d]}. "
-                    f"All chunks except the last must be uniform."
+                    f"Dask chunk size {c} along dimension {d} (block {i}) "
+                    f"is not a multiple of the OM chunk size {om_chunks[d]}."
                 )
-        if dim_chunks[-1] > om_chunks[d]:
-            raise ValueError(
-                f"Last chunk size {dim_chunks[-1]} along dimension {d} "
-                f"exceeds the declared OM chunk size {om_chunks[d]}."
-            )
+
+    # C-order alignment: full trailing dims after first multi-chunk dim
+    first_multi = None
+    for d in range(ndim):
+        local_n = math.ceil(data_chunks[d][0] / om_chunks[d])
+        if local_n > 1:
+            first_multi = d
+            break
+
+    if first_multi is not None:
+        for d in range(first_multi + 1, ndim):
+            local_n = math.ceil(data_chunks[d][0] / om_chunks[d])
+            global_n = math.ceil(array_shape[d] / om_chunks[d])
+            if local_n != global_n:
+                raise ValueError(
+                    f"Dask blocks have multiple OM chunks in dimension {first_multi}, "
+                    f"but dimension {d} is not fully covered by each dask block "
+                    f"(dask chunk {data_chunks[d][0]} vs array size {array_shape[d]}). "
+                    f"Rechunk so trailing dimensions are fully covered."
+                )
 
 
 def _resolve_chunks_for_variable(
@@ -398,17 +429,7 @@ def write_dataset(
         sf, ao, comp = _resolve_encoding_for_variable(name, encoding, scale_factor, add_offset, compression)
 
         if is_chunked:
-            try:
-                _validate_uniform_chunks(data.chunks, resolved_chunks)
-            except ValueError:
-                warnings.warn(
-                    f"Variable '{name}' has chunks incompatible with the "
-                    f"requested OM chunks {resolved_chunks}. "
-                    f"Falling back to materializing the array in memory.",
-                    UserWarning,
-                    stacklevel=2,
-                )
-                is_chunked = False
+            _validate_chunk_alignment(data.chunks, resolved_chunks, var.shape)
 
         if is_chunked:
             om_var = writer.write_array_streaming(

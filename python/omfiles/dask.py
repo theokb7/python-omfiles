@@ -6,6 +6,7 @@ import itertools
 from typing import TYPE_CHECKING, Optional, Sequence
 
 from omfiles._rust import OmFileWriter, OmVariable
+from omfiles.xarray import _validate_chunk_alignment
 
 if TYPE_CHECKING:
     import dask.array as da
@@ -43,14 +44,16 @@ def write_dask_array(
     is held in memory at a time.
 
     The dask array's chunk structure is used to determine the OM file's
-    chunk dimensions by default. Dask chunks must be uniform (all the same
-    size, except the last chunk along each dimension which may be smaller).
+    chunk dimensions by default. Dask chunks must be multiples of the OM
+    chunk sizes (except the last chunk along each dimension which may be
+    smaller). When a dask block contains more than one OM chunk in a
+    dimension, all trailing dimensions must be fully covered by each block.
 
     Args:
         writer: An open OmFileWriter instance.
         data: A dask array to write.
         chunks: OM file chunk sizes per dimension. If None, uses the dask
-                array's chunk sizes. Must match the dask chunk sizes.
+                array's chunk sizes. Dask chunks must be multiples of these.
         scale_factor: Scale factor for float compression (default: 1.0).
         add_offset: Offset for float compression (default: 0.0).
         compression: Compression algorithm (default: "pfor_delta_2d").
@@ -62,7 +65,7 @@ def write_dask_array(
 
     Raises:
         TypeError: If data is not a dask array.
-        ValueError: If dask chunks are non-uniform or incompatible.
+        ValueError: If dask chunks are incompatible with OM chunks.
         ImportError: If dask is not installed.
     """
     import dask.array as da
@@ -73,20 +76,8 @@ def write_dask_array(
     if chunks is None:
         chunks = [c[0] for c in data.chunks]
 
-    for d in range(data.ndim):
-        dim_chunks = data.chunks[d]
-        for i, c in enumerate(dim_chunks[:-1]):
-            if c != chunks[d]:
-                raise ValueError(
-                    f"Dask chunk size {c} along dimension {d} (block {i}) "
-                    f"does not match the declared OM chunk size {chunks[d]}. "
-                    f"All chunks except the last must be uniform."
-                )
-        if dim_chunks[-1] > chunks[d]:
-            raise ValueError(
-                f"Last dask chunk size {dim_chunks[-1]} along dimension {d} "
-                f"exceeds the declared OM chunk size {chunks[d]}."
-            )
+
+    _validate_chunk_alignment(data.chunks, list(chunks), data.shape)
 
     return writer.write_array_streaming(
         dimensions=[int(d) for d in data.shape],
