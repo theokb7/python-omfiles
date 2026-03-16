@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0](https://github.com/theokb7/python-omfiles/compare/v1.1.0...v1.2.0) (2026-03-16)
+
+
+### Features
+
+* add and test fsspec xarray support ([b1f2664](https://github.com/theokb7/python-omfiles/commit/b1f26645735f10469065472939105f9112ada2c2))
+* add dask array integration ([7fdaad5](https://github.com/theokb7/python-omfiles/commit/7fdaad52b7b9453695d2a43b32b7a9fea93c46ad))
+* Add memory usage test ([ca8b232](https://github.com/theokb7/python-omfiles/commit/ca8b232a5f4881c1bef637d8080971e80c741b02))
+* add streaming write API for iterator-based array writing ([75bb535](https://github.com/theokb7/python-omfiles/commit/75bb535907bb32978e0c477f5a5c863e65d7d6e5))
+* add xarray Dataset write support ([3665d74](https://github.com/theokb7/python-omfiles/commit/3665d74a10912dc24ab67bfd1da0d9ec4e66e053))
+* Add xarray.open_dataset fsspec support ([f137509](https://github.com/theokb7/python-omfiles/commit/f1375099141b3a914f38ac1040ad4e75f4ffcdf2))
+
+
+### Bug Fixes
+
+* avoid deprecation warning in test_codecs.py ([#101](https://github.com/theokb7/python-omfiles/issues/101)) ([2d43cd6](https://github.com/theokb7/python-omfiles/commit/2d43cd67ebb15bee56351cb20af2bfea833f395f))
+* GaussianGrid shape of latitude and longitude should match grid shape ([#95](https://github.com/theokb7/python-omfiles/issues/95)) ([c737607](https://github.com/theokb7/python-omfiles/commit/c737607bf395b86bded875c7686380eef6b5bb3e))
+* pass shape tuple instead of reader to get_grid ([#96](https://github.com/theokb7/python-omfiles/issues/96)) ([c844735](https://github.com/theokb7/python-omfiles/commit/c84473519947fe4e0a1dbd2ca17f6d8297f7abe8))
+
 ## [1.1.0](https://github.com/theokb7/python-omfiles/compare/v1.0.0...v1.1.0) (2026-03-16)
 
 
