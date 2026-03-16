@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/theokb7/python-omfiles/compare/v1.0.0...v1.1.0) (2026-03-16)
+
+
+### Features
+
+* add and test fsspec xarray support ([b1f2664](https://github.com/theokb7/python-omfiles/commit/b1f26645735f10469065472939105f9112ada2c2))
+* add dask array integration ([7fdaad5](https://github.com/theokb7/python-omfiles/commit/7fdaad52b7b9453695d2a43b32b7a9fea93c46ad))
+* Add memory usage test ([ca8b232](https://github.com/theokb7/python-omfiles/commit/ca8b232a5f4881c1bef637d8080971e80c741b02))
+* add streaming write API for iterator-based array writing ([75bb535](https://github.com/theokb7/python-omfiles/commit/75bb535907bb32978e0c477f5a5c863e65d7d6e5))
+* add xarray Dataset write support ([3665d74](https://github.com/theokb7/python-omfiles/commit/3665d74a10912dc24ab67bfd1da0d9ec4e66e053))
+* Add xarray.open_dataset fsspec support ([f137509](https://github.com/theokb7/python-omfiles/commit/f1375099141b3a914f38ac1040ad4e75f4ffcdf2))
+* OmChunkFileReader reader ([#89](https://github.com/theokb7/python-omfiles/issues/89)) ([c3173c9](https://github.com/theokb7/python-omfiles/commit/c3173c9777a505aaae4acfe0d4fb61d7092dffba))
+* OmGrid interface based on crs_wkt  ([#32](https://github.com/theokb7/python-omfiles/issues/32)) ([8db561c](https://github.com/theokb7/python-omfiles/commit/8db561c04cb2617bea122c4cde0ec8c9a108a38f))
+
+
+### Bug Fixes
+
+* assert that fsspec returned the expect number of bytes ([0dfa0c5](https://github.com/theokb7/python-omfiles/commit/0dfa0c5ed05db8904460ee745e93fa6d3fdbc5de))
+* asyncio_default_fixture_loop_scope warning ([#83](https://github.com/theokb7/python-omfiles/issues/83)) ([ec63718](https://github.com/theokb7/python-omfiles/commit/ec637181bbfa2484153fcf8a8797f080ab7d3476))
+* avoid deprecation warning in test_codecs.py ([#101](https://github.com/theokb7/python-omfiles/issues/101)) ([2d43cd6](https://github.com/theokb7/python-omfiles/commit/2d43cd67ebb15bee56351cb20af2bfea833f395f))
+* **deps:** update dependencies and necessary adjustments ([#87](https://github.com/theokb7/python-omfiles/issues/87)) ([f87ed5e](https://github.com/theokb7/python-omfiles/commit/f87ed5e63c4ee4d143aa7520cbe87f44912ae15d))
+* failing fs-spec test ([81ec4c3](https://github.com/theokb7/python-omfiles/commit/81ec4c39d16291ad4e9875a522fe9c022ec54cfd))
+* fsspec tests should not depend on specific files ([#68](https://github.com/theokb7/python-omfiles/issues/68)) ([7a41bc6](https://github.com/theokb7/python-omfiles/commit/7a41bc615ef963f02efc9c2bd3e4b993ac41df5f))
+* GaussianGrid shape of latitude and longitude should match grid shape ([#95](https://github.com/theokb7/python-omfiles/issues/95)) ([c737607](https://github.com/theokb7/python-omfiles/commit/c737607bf395b86bded875c7686380eef6b5bb3e))
+* Improve grid return types ([#93](https://github.com/theokb7/python-omfiles/issues/93)) ([140c2d8](https://github.com/theokb7/python-omfiles/commit/140c2d888fa90f5cc3def1d79038888fd5c84a50))
+* metadata traversal in legacy files ([#91](https://github.com/theokb7/python-omfiles/issues/91)) ([a067756](https://github.com/theokb7/python-omfiles/commit/a067756417e617562c9b3d6846759fa717c780b4))
+* only squeeze dimensions for integer indices ([#90](https://github.com/theokb7/python-omfiles/issues/90)) ([0d4ab00](https://github.com/theokb7/python-omfiles/commit/0d4ab00dbde7487289c67d6b89a22b93eca5540d))
+* pass shape tuple instead of reader to get_grid ([#96](https://github.com/theokb7/python-omfiles/issues/96)) ([c844735](https://github.com/theokb7/python-omfiles/commit/c84473519947fe4e0a1dbd2ca17f6d8297f7abe8))
+* writer support for numpy scalars ([#72](https://github.com/theokb7/python-omfiles/issues/72)) ([1729c81](https://github.com/theokb7/python-omfiles/commit/1729c81a3d43788def34cfed3ce7ecf9877fb267))
+
 ## [1.0.0](https://github.com/theokb7/python-omfiles/compare/v1.2.0...v1.0.0) (2026-03-16)
 
 
