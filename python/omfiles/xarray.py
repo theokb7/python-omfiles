@@ -32,8 +32,15 @@ from ._rust import OmFileReader, OmFileWriter, OmVariable
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 
+def _is_remote_uri(path: str) -> bool:
+    return "://" in path
+
+
 class OmXarrayEntrypoint(BackendEntrypoint):
     def guess_can_open(self, filename_or_obj):
+        if isinstance(filename_or_obj, tuple):
+            _, path = filename_or_obj
+            return isinstance(path, str) and path.endswith(".om")
         return isinstance(filename_or_obj, str) and filename_or_obj.endswith(".om")
 
     def open_dataset(
@@ -42,8 +49,19 @@ class OmXarrayEntrypoint(BackendEntrypoint):
         *,
         drop_variables=None,
     ) -> Dataset:
-        filename_or_obj = _normalize_path(filename_or_obj)
-        with OmFileReader(filename_or_obj) as root_variable:
+        if isinstance(filename_or_obj, tuple):
+            fs, path = filename_or_obj
+            reader = OmFileReader.from_fsspec(fs, path)
+        elif isinstance(filename_or_obj, str) and _is_remote_uri(filename_or_obj):
+            import fsspec
+
+            fs, _, paths = fsspec.get_fs_token_paths(filename_or_obj)
+            reader = OmFileReader.from_fsspec(fs, paths[0])
+        else:
+            filename_or_obj = _normalize_path(filename_or_obj)
+            reader = OmFileReader(filename_or_obj)
+
+        with reader as root_variable:
             store = OmDataStore(root_variable)
             store_entrypoint = StoreBackendEntrypoint()
             ds = store_entrypoint.open_dataset(
@@ -56,7 +74,6 @@ class OmXarrayEntrypoint(BackendEntrypoint):
                 ds = ds.set_coords(coord_names)
                 ds.attrs = {k: v for k, v in ds.attrs.items() if k != coord_attr}
             return ds
-        raise ValueError("Failed to open dataset")
 
     description = "Use .om files in Xarray"
 

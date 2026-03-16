@@ -394,3 +394,71 @@ def test_write_and_read_dataset_fsspec_roundtrip(memory_fs):
     np.testing.assert_array_equal(ds2.coords["lat"].values, ds.coords["lat"].values)
     np.testing.assert_array_equal(ds2.coords["lon"].values, ds.coords["lon"].values)
     assert ds2.attrs["description"] == "full fsspec roundtrip"
+
+
+# --- open_dataset fsspec tests ---
+
+
+@filter_numpy_size_warning
+def test_open_dataset_fsspec_tuple(memory_fs):
+    """open_dataset accepts an (fs, path) tuple to read via fsspec."""
+    temperature_data = np.random.rand(5, 5).astype(np.float32)
+    ds = xr.Dataset(
+        {"temperature": (["lat", "lon"], temperature_data)},
+        coords={
+            "lat": np.arange(5, dtype=np.float32),
+            "lon": np.arange(5, dtype=np.float32),
+        },
+        attrs={"description": "tuple test"},
+    )
+    path = "tuple_open_test.om"
+    write_dataset(ds, path, fs=memory_fs, scale_factor=100000.0)
+
+    ds2 = xr.open_dataset((memory_fs, path), engine="om")
+    np.testing.assert_array_almost_equal(ds2["temperature"].values, temperature_data, decimal=4)
+    np.testing.assert_array_equal(ds2.coords["lat"].values, ds.coords["lat"].values)
+    np.testing.assert_array_equal(ds2.coords["lon"].values, ds.coords["lon"].values)
+    assert ds2.attrs["description"] == "tuple test"
+
+
+@filter_numpy_size_warning
+def test_open_dataset_fsspec_tuple_local(local_fs):
+    """open_dataset with a local fsspec (fs, path) tuple."""
+    ds = xr.Dataset(
+        {"temperature": (["lat", "lon"], np.random.rand(8, 8).astype(np.float32))},
+        coords={
+            "lat": np.arange(8, dtype=np.float32),
+            "lon": np.arange(8, dtype=np.float32),
+        },
+    )
+    with tempfile.NamedTemporaryFile(suffix=".om", delete=False) as tmp:
+        tmp_path = tmp.name
+    try:
+        write_dataset(ds, tmp_path, fs=local_fs, scale_factor=100000.0)
+        ds2 = xr.open_dataset((local_fs, tmp_path), engine="om")
+        np.testing.assert_array_almost_equal(ds2["temperature"].values, ds["temperature"].values, decimal=4)
+    finally:
+        os.unlink(tmp_path)
+
+
+@filter_numpy_size_warning
+def test_open_dataset_fsspec_full_roundtrip(memory_fs):
+    """Full roundtrip: write_dataset with fs=, read back with open_dataset (fs, path) tuple."""
+    temperature_data = np.random.rand(5, 5).astype(np.float32)
+    ds = xr.Dataset(
+        {"temperature": (["lat", "lon"], temperature_data)},
+        coords={
+            "lat": np.arange(5, dtype=np.float32),
+            "lon": np.arange(5, dtype=np.float32),
+        },
+        attrs={"description": "full roundtrip"},
+    )
+    path = "full_roundtrip_open.om"
+    write_dataset(ds, path, fs=memory_fs, scale_factor=100000.0)
+
+    # Read back via (fs, path) tuple — no temp file needed
+    ds2 = xr.open_dataset((memory_fs, path), engine="om")
+    np.testing.assert_array_almost_equal(ds2["temperature"].values, temperature_data, decimal=4)
+    np.testing.assert_array_equal(ds2.coords["lat"].values, ds.coords["lat"].values)
+    np.testing.assert_array_equal(ds2.coords["lon"].values, ds.coords["lon"].values)
+    assert ds2.attrs["description"] == "full roundtrip"
